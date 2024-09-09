@@ -8,4 +8,6 @@
     <string name="delete">delete</string>
     <string name="date">date</string>
     <string name="description">description</string>
+    <string name="save">Save</string>
+    <string name="close">Close</string>
 </resources>
