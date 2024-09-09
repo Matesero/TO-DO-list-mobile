@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">TO-DO-list-mobile</string>
+    <string name="download">download</string>
+    <string name="upload">upload</string>
+    <string name="reset">reset</string>
+    <string name="add">add</string>
+</resources>
