@@ -4,4 +4,8 @@
     <string name="upload">upload</string>
     <string name="reset">reset</string>
     <string name="add">add</string>
+    <string name="edit">edit</string>
+    <string name="delete">delete</string>
+    <string name="date">date</string>
+    <string name="description">description</string>
 </resources>
