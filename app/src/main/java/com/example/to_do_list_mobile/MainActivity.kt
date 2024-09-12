@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
 
         addBtn = findViewById(R.id.addBtn)
         addBtn.setOnClickListener{
-            showAddTodoDialog();
+            showAddTaskDialog();
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun showAddTodoDialog() {
+    private fun showAddTaskDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null)
         val editDate = dialogView.findViewById<EditText>(R.id.editTextDate)
         val editDescription = dialogView.findViewById<EditText>(R.id.editTextDescription)
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
                 sort()
                 dialog.dismiss()
             } else {
-                error.text = "Enter date correctly"
+                error.text = getString(R.string.incorrectDate)
             }
         }
 
@@ -158,13 +158,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in java")
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
             val uri: Uri? = data.data
             val path: String = uri?.path.toString()
             val file = File(path)
-            Log.d("Download", file.toString())
+
             if (uri != null) {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     val jsonString = inputStream.bufferedReader().use { it.readText() }
@@ -195,7 +195,6 @@ class MainActivity : AppCompatActivity() {
         }
         sort()
     }
-
     private fun sort() {
         for (i in 0..< toDoList.size - 1){
             for (j in i + 1..< toDoList.size){

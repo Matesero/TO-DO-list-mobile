@@ -53,10 +53,12 @@ class ToDoListAdapter(
             holder.taskDescriptionEdit.setText(task.description)
         }
 
-        holder.taskDescriptionView.setOnClickListener {
+        holder.taskDescriptionView.setOnClickListener { view ->
             holder.taskDescriptionView.visibility = View.GONE
             holder.taskDescriptionEdit.visibility = View.VISIBLE
             holder.taskDescriptionEdit.requestFocus()
+            val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
         }
 
         holder.taskDescriptionEdit.setOnClickListener { view ->
@@ -67,7 +69,7 @@ class ToDoListAdapter(
                 holder.taskDescriptionView.visibility = View.VISIBLE
                 holder.taskDescriptionEdit.visibility = View.GONE
                 holder.taskDescriptionEdit.clearFocus()
-                val imm = holder.itemView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
         }
@@ -75,10 +77,12 @@ class ToDoListAdapter(
         holder.taskDateView.text = task.date
         holder.taskDateEdit.setText(task.date)
 
-        holder.taskDateView.setOnClickListener {
+        holder.taskDateView.setOnClickListener { view ->
             holder.taskDateView.visibility = View.GONE
             holder.taskDateEdit.visibility = View.VISIBLE
             holder.taskDateEdit.requestFocus()
+            val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
         }
 
         holder.taskDateEdit.setOnClickListener { view ->
@@ -93,8 +97,8 @@ class ToDoListAdapter(
                 }
                 holder.taskDateView.visibility = View.VISIBLE
                 holder.taskDateEdit.visibility = View.GONE
-                holder.taskDateEdit.clearFocus()
-                val imm = holder.itemView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                holder.taskDateEdit.requestFocus()
+                val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
         }
@@ -126,10 +130,6 @@ class ToDoListAdapter(
         }
     }
 
-    override fun getItemCount(): Int {
-        return toDoList.size
-    }
-
     private fun updateSwitch (switch: Switch, task: LinearLayout, completed: Boolean, date: TextView, description: TextView, context: Context) {
         if (completed) {
             switch.thumbDrawable = ContextCompat.getDrawable(context, R.drawable.switch_thumb_on)
@@ -156,4 +156,9 @@ class ToDoListAdapter(
             false
         }
     }
+
+    override fun getItemCount(): Int {
+        return toDoList.size
+    }
+
 }

@@ -10,6 +10,7 @@
     <string name="description">description</string>
     <string name="save">Save</string>
     <string name="close">Close</string>
-    <string name="input_task">Введите задачу</string>
-    <string name="input_date">Введите дату (YYYY-MM-DD)</string>
+    <string name="input_task">Description</string>
+    <string name="input_date">Date (YYYY-MM-DD)</string>
+    <string name="incorrectDate">Enter date correctly</string>
 </resources>
