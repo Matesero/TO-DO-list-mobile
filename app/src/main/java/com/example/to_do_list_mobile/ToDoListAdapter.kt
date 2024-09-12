@@ -8,6 +8,7 @@ import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -16,6 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.recyclerview.widget.RecyclerView
 import java.lang.Exception
 import java.time.LocalDate
@@ -57,13 +59,16 @@ class ToDoListAdapter(
             holder.taskDescriptionEdit.requestFocus()
         }
 
-        holder.taskDescriptionEdit.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
+        holder.taskDescriptionEdit.setOnClickListener { view ->
+            if (holder.taskDescriptionEdit.hasFocus()) {
                 val newDescription = holder.taskDescriptionEdit.text.toString()
                 task.description = newDescription
                 holder.taskDescriptionView.text = newDescription
                 holder.taskDescriptionView.visibility = View.VISIBLE
                 holder.taskDescriptionEdit.visibility = View.GONE
+                holder.taskDescriptionEdit.clearFocus()
+                val imm = holder.itemView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
         }
 
@@ -76,20 +81,21 @@ class ToDoListAdapter(
             holder.taskDateEdit.requestFocus()
         }
 
-        holder.taskDateEdit.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
+        holder.taskDateEdit.setOnClickListener { view ->
+            if (holder.taskDateEdit.hasFocus()) {
                 val newDate = holder.taskDateEdit.text.toString()
                 if (checkDate(newDate) || newDate === "date") {
                     task.date = newDate
                     holder.taskDateView.text = newDate
-                    holder.taskDateView.visibility = View.VISIBLE
-                    holder.taskDateEdit.visibility = View.GONE
                 } else {
-                    holder.taskDateView.visibility = View.VISIBLE
-                    holder.taskDateEdit.visibility = View.GONE
                     holder.taskDateEdit.setText(task.date)
                     Toast.makeText(holder.itemView.context, "Дата введена некорректно!", Toast.LENGTH_SHORT).show()
                 }
+                holder.taskDateView.visibility = View.VISIBLE
+                holder.taskDateEdit.visibility = View.GONE
+                holder.taskDateEdit.clearFocus()
+                val imm = holder.itemView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
         }
 
