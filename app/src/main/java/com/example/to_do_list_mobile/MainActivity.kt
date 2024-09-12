@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity() {
                 val newTask = Task(date, description)
                 toDoList.add(newTask)
                 toDoListAdapter.notifyItemInserted(toDoList.size - 1)
+                sort()
                 dialog.dismiss()
             } else {
                 error.text = "Enter date correctly"
@@ -189,7 +190,42 @@ class MainActivity : AppCompatActivity() {
         for (i in 0..<newToDoList.size){
             val task = newToDoList[i]
             toDoList.add(task)
-            toDoListAdapter.notifyDataSetChanged()
         }
+        sort()
+    }
+
+    private fun sort() {
+        for (i in 0..< toDoList.size - 1){
+            for (j in i + 1..< toDoList.size){
+                if (compare(toDoList[i].date, toDoList[j].date)) {
+                    Log.d("sort", "sort")
+                    val temp = toDoList[i]
+                    toDoList[i] = toDoList[j]
+                    toDoList[j] = temp
+                    toDoListAdapter.notifyDataSetChanged()
+                }
+            }
+        }
+    }
+
+    private fun compare(firstDate: String, secondDate: String) : Boolean {
+        if (firstDate == "date") {
+            return false
+        } else if (firstDate != "date" && secondDate == "date"){
+            return true
+        }
+
+        val firstNumbers = firstDate.split("-").map { it.toInt() }
+        val secondNumbers = secondDate.split("-").map { it.toInt() }
+
+        for (i in 0..2){
+            if (firstNumbers[i] > secondNumbers[i]) {
+                return true
+            } else if (firstNumbers[i] < secondNumbers[i]) {
+                return false
+            }
+        }
+
+        return false
     }
 }
