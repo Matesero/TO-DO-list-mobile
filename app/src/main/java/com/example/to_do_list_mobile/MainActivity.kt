@@ -1,31 +1,27 @@
 package com.example.to_do_list_mobile
 
-import android.content.Context
+import TaskRepository
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.LayoutInflater
-import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ReportFragment.Companion.reportFragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.to_do_list_mobile.databinding.ActivityMainBinding
 import java.lang.Exception
-import java.time.LocalDate
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import okhttp3.internal.notify
+import okhttp3.internal.notifyAll
 import java.io.File
-import java.time.format.DateTimeFormatter
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var toDoListAdapter: ToDoListAdapter
     private lateinit var addBtn: ImageButton
     private lateinit var binding: ActivityMainBinding
+    private lateinit var taskRepository: TaskRepository;
     private var toDoList = ArrayList<Task>()
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -41,17 +38,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
+        taskRepository = TaskRepository()
 
         addBtn = findViewById(R.id.addBtn)
         addBtn.setOnClickListener{
-            showAddTaskDialog();
+            taskRepository.createNewTask();
+            displayToDoList();
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         toolbar.setOnMenuItemClickListener {
             when(it.itemId) {
                 R.id.download->{
-                    download("toDoList", toDoList)
+                    download("toDoList", taskRepository.toDoList)
                     true
                 }
                 R.id.upload->{
@@ -69,7 +68,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         toDoListAdapter = ToDoListAdapter(
-            toDoList
+            toDoList,
+            taskRepository
         ) { position ->
             toDoList.removeAt(position)
             toDoListAdapter.notifyItemRemoved(position)
@@ -79,61 +79,8 @@ class MainActivity : AppCompatActivity() {
         toDoListView = findViewById(R.id.toDoList)
         toDoListView.layoutManager = LinearLayoutManager(this)
         toDoListView.adapter = toDoListAdapter
-    }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun showAddTaskDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null)
-        val editDate = dialogView.findViewById<EditText>(R.id.editTextDate)
-        val editDescription = dialogView.findViewById<EditText>(R.id.editTextDescription)
-        val error = dialogView.findViewById<TextView>(R.id.error);
-        val saveBtn = dialogView.findViewById<Button>(R.id.saveBtn)
-        val closeBtn = dialogView.findViewById<Button>(R.id.closeBtn)
-
-        val builder = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setTitle("Add task")
-
-        val dialog = builder.create()
-        dialog.show()
-
-        saveBtn.setOnClickListener {
-            var description = editDescription.text.toString()
-            if (description.isEmpty()) {
-                description = "description";
-            }
-
-            var date = editDate.text.toString()
-            if (date.isEmpty()) {
-                date = "date";
-            }
-
-            if (checkDate(date) || date === "date") {
-                val newTask = Task(date, description)
-                toDoList.add(newTask)
-                toDoListAdapter.notifyItemInserted(toDoList.size - 1)
-                sort()
-                dialog.dismiss()
-            } else {
-                error.text = getString(R.string.incorrectDate)
-            }
-        }
-
-        closeBtn.setOnClickListener {
-            dialog.dismiss()
-        }
-    }
-
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun checkDate(date: String): Boolean {
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        return try {
-            LocalDate.parse(date, formatter)
-            true
-        } catch (e: Exception) {
-            false
-        }
+        displayToDoList()
     }
 
     private fun download(fileName: String, data: Any) {
@@ -152,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         intent.addCategory(Intent.CATEGORY_OPENABLE)
         intent.type = "application/json"
         try {
+            reset();
             startActivityForResult(Intent.createChooser(intent, "select file"), 100)
         } catch (e: Exception) {
             return
@@ -163,13 +111,18 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
             val uri: Uri? = data.data
             val path: String = uri?.path.toString()
-            val file = File(path)
 
             if (uri != null) {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     val jsonString = inputStream.bufferedReader().use { it.readText() }
-                    val newToDoList = jsonToArray(jsonString)
-                    displayToDoList(newToDoList)
+                    val newToDoList = jsonToArray(jsonString);
+                    var newTaskDTOList = ArrayList<TaskDTO>();
+                    for (task in newToDoList) {
+                        val taskDTO = TaskDTO(task.date, task.description, task.isCompleted);
+                        newTaskDTOList.add(taskDTO);
+                    }
+                    taskRepository.sendToDatabase(newTaskDTOList);
+                    displayToDoList();
                 }
             }
         }
@@ -182,51 +135,18 @@ class MainActivity : AppCompatActivity() {
         return gson.fromJson(file, taskType)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun reset() {
+        taskRepository.deleteAllTasks();
+        toDoListAdapter.notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun displayToDoList(){
+        taskRepository.uploadFromDatabase();
         toDoList.clear()
+        toDoList.addAll(taskRepository.toDoList)
         toDoListAdapter.notifyDataSetChanged()
-    }
-
-    private fun displayToDoList(newToDoList: ArrayList<Task>){
-        reset()
-        for (i in 0..<newToDoList.size){
-            val task = newToDoList[i]
-            toDoList.add(task)
-        }
-        sort()
-    }
-    private fun sort() {
-        for (i in 0..< toDoList.size - 1){
-            for (j in i + 1..< toDoList.size){
-                if (compare(toDoList[i].date, toDoList[j].date)) {
-                    Log.d("sort", "sort")
-                    val temp = toDoList[i]
-                    toDoList[i] = toDoList[j]
-                    toDoList[j] = temp
-                    toDoListAdapter.notifyDataSetChanged()
-                }
-            }
-        }
-    }
-
-    private fun compare(firstDate: String, secondDate: String) : Boolean {
-        if (firstDate == "date") {
-            return false
-        } else if (firstDate != "date" && secondDate == "date"){
-            return true
-        }
-
-        val firstNumbers = firstDate.split("-").map { it.toInt() }
-        val secondNumbers = secondDate.split("-").map { it.toInt() }
-
-        for (i in 0..2){
-            if (firstNumbers[i] > secondNumbers[i]) {
-                return true
-            } else if (firstNumbers[i] < secondNumbers[i]) {
-                return false
-            }
-        }
-
-        return false
+        Log.d("after clear", toDoList.toString())
     }
 }

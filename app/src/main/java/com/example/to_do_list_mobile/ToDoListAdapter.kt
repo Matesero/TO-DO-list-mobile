@@ -1,10 +1,10 @@
 package com.example.to_do_list_mobile
 
-import android.app.ActivityManager.TaskDescription
+import TaskRepository
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Paint
 import android.os.Build
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,14 +17,15 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import java.lang.Exception
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class ToDoListAdapter(
     private val toDoList: ArrayList<Task>,
+    private var taskRepository: TaskRepository,
     private val deleteCallback: (Int) -> Unit
 ) : RecyclerView.Adapter<ToDoListAdapter.ViewHolder>() {
 
@@ -46,87 +47,91 @@ class ToDoListAdapter(
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val task = toDoList[position]
-
-        holder.taskDescriptionView.text = task.description
-        if (task.description !== "description") {
-            holder.taskDescriptionEdit.setText(task.description)
-        }
-
-        holder.taskDescriptionView.setOnClickListener { view ->
-            holder.taskDescriptionView.visibility = View.GONE
-            holder.taskDescriptionEdit.visibility = View.VISIBLE
-            holder.taskDescriptionEdit.requestFocus()
-            val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
-        }
-
-        holder.taskDescriptionEdit.setOnClickListener { view ->
-            if (holder.taskDescriptionEdit.hasFocus()) {
-                val newDescription = holder.taskDescriptionEdit.text.toString()
-                task.description = newDescription
-                holder.taskDescriptionView.text = newDescription
-                holder.taskDescriptionView.visibility = View.VISIBLE
-                holder.taskDescriptionEdit.visibility = View.GONE
-                holder.taskDescriptionEdit.clearFocus()
-                val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(view.windowToken, 0)
-            }
-        }
-
-        holder.taskDateView.text = task.date
-        holder.taskDateEdit.setText(task.date)
-
-        holder.taskDateView.setOnClickListener { view ->
-            holder.taskDateView.visibility = View.GONE
-            holder.taskDateEdit.visibility = View.VISIBLE
-            holder.taskDateEdit.requestFocus()
-            val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
-        }
-
-        holder.taskDateEdit.setOnClickListener { view ->
-            if (holder.taskDateEdit.hasFocus()) {
-                val newDate = holder.taskDateEdit.text.toString()
-                if (checkDate(newDate) || newDate === "date") {
-                    task.date = newDate
-                    holder.taskDateView.text = newDate
-                } else {
-                    holder.taskDateEdit.setText(task.date)
-                    Toast.makeText(holder.itemView.context, "Дата введена некорректно!", Toast.LENGTH_SHORT).show()
+        val taskId = toDoList[position].id;
+        Log.d("onBindView", "start")
+        taskRepository.getTaskFromDatabase(taskId) { task ->
+            if (task != null){
+                Log.d("onBindView", "yes")
+                holder.taskDescriptionView.text = task.description
+                if (task.description !== "description") {
+                    holder.taskDescriptionEdit.setText(task.description)
                 }
-                holder.taskDateView.visibility = View.VISIBLE
-                holder.taskDateEdit.visibility = View.GONE
-                holder.taskDateEdit.requestFocus()
-                val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(view.windowToken, 0)
+
+                holder.taskDescriptionView.setOnClickListener { view ->
+                    holder.taskDescriptionView.visibility = View.GONE
+                    holder.taskDescriptionEdit.visibility = View.VISIBLE
+                    holder.taskDescriptionEdit.requestFocus()
+                    val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+                    Log.d("desc edit view", "")
+                }
+
+                holder.taskDescriptionEdit.setOnClickListener { view ->
+                    if (holder.taskDescriptionEdit.hasFocus()) {
+                        val newDescription = holder.taskDescriptionEdit.text.toString()
+                        taskRepository.changeDescription(taskId, newDescription)
+                        val imm = holder.taskDescriptionEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.hideSoftInputFromWindow(view.windowToken, 0)
+                        Log.d("desc edit not visible", "")
+                    }
+                }
+
+                holder.taskDateView.text = task.date
+                holder.taskDateEdit.setText(task.date)
+
+                holder.taskDateView.setOnClickListener { view ->
+                    Log.d("data edit view ", "")
+                    holder.taskDateView.visibility = View.GONE
+                    holder.taskDateEdit.visibility = View.VISIBLE
+                    holder.taskDateEdit.requestFocus()
+                    val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+                }
+
+                holder.taskDateEdit.setOnClickListener { view ->
+                    Log.d("desc edit not visible", "")
+                    if (holder.taskDateEdit.hasFocus()) {
+                        val newDate = holder.taskDateEdit.text.toString()
+                        if (checkDate(newDate)) {
+                            taskRepository.changeDate(taskId, newDate);
+                        } else {
+                            holder.taskDateEdit.setText(task.date)
+                            Toast.makeText(holder.itemView.context, "Дата введена некорректно!", Toast.LENGTH_SHORT).show()
+                        }
+                        val imm = holder.taskDateEdit.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.hideSoftInputFromWindow(view.windowToken, 0)
+                    }
+                }
+
+                holder.completedSwitch.isChecked = task.isCompleted
+                updateSwitch (
+                    holder.completedSwitch,
+                    holder.task,
+                    task.isCompleted,
+                    holder.taskDateView,
+                    holder.taskDescriptionView,
+                    holder.itemView.context
+                )
+
+                holder.completedSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    task.isCompleted = isChecked
+                    taskRepository.switchCompleted(taskId);
+                    Log.d("switch", taskId.toString())
+                    updateSwitch (
+                        holder.completedSwitch,
+                        holder.task,
+                        isChecked,
+                        holder.taskDateView,
+                        holder.taskDescriptionView,
+                        holder.itemView.context
+                    )
+                }
+
+                holder.deleteButton.setOnClickListener {
+                    taskRepository.deleteOneTask(taskId);
+                    deleteCallback(position)
+                }
             }
-        }
-
-        holder.completedSwitch.isChecked = task.completed
-        updateSwitch (
-            holder.completedSwitch,
-            holder.task,
-            task.completed,
-            holder.taskDateView,
-            holder.taskDescriptionView,
-            holder.itemView.context
-        )
-
-        holder.completedSwitch.setOnCheckedChangeListener { _, isChecked ->
-            task.completed = isChecked
-            updateSwitch (
-                holder.completedSwitch,
-                holder.task,
-                isChecked,
-                holder.taskDateView,
-                holder.taskDescriptionView,
-                holder.itemView.context
-            )
-        }
-
-        holder.deleteButton.setOnClickListener {
-            deleteCallback(position)
         }
     }
 
@@ -160,5 +165,4 @@ class ToDoListAdapter(
     override fun getItemCount(): Int {
         return toDoList.size
     }
-
 }
