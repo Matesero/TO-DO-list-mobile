@@ -1,14 +1,11 @@
-import android.util.Log
 import com.example.to_do_list_mobile.Task
 import com.example.to_do_list_mobile.TaskDTO
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class TaskRepository {
+class TaskRepository(private val updateUI: (List<Task>) -> Unit)  {
     private val api: TaskApi
     var toDoList = ArrayList<Task>()
 
@@ -34,6 +31,7 @@ class TaskRepository {
     }
 
     fun sendToDatabase(list: ArrayList<TaskDTO>) {
+        deleteAllTasks()
         api.addAllTasks(list).enqueue(object : retrofit2.Callback<Void> {
             override fun onResponse(call: Call<Void>, response: retrofit2.Response<Void>) {
                 uploadFromDatabase()
@@ -49,13 +47,11 @@ class TaskRepository {
         api.getAllTasks().enqueue(object : retrofit2.Callback<List<Task>> {
             override fun onResponse(call: Call<List<Task>>, response: retrofit2.Response<List<Task>>) {
                 if (response.isSuccessful) {
-                    toDoList.clear();
+                    toDoList.clear()
                     response.body()?.let { tasks ->
-                        for (task in tasks) {
-                            Log.d("123", task.toString())
-                            toDoList.add(task)
-                        }
-                    } ?: println("No tasks found.")
+                        toDoList.addAll(tasks)
+                    }
+                    updateUI(toDoList);
                 } else {
                     println("Error with upload: ${response.errorBody()?.string()}")
                 }
@@ -111,7 +107,6 @@ class TaskRepository {
     fun switchCompleted(id: Int) {
         api.switchCompleted(id).enqueue(object : retrofit2.Callback<Void> {
             override fun onResponse(call: Call<Void>, response: retrofit2.Response<Void>) {
-                uploadFromDatabase()
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
@@ -123,7 +118,6 @@ class TaskRepository {
     fun changeDate(id: Int, date: String) {
         api.changeDate(id, date).enqueue(object : retrofit2.Callback<Void> {
             override fun onResponse(call: Call<Void>, response: retrofit2.Response<Void>) {
-                Log.d("change date", date)
                 uploadFromDatabase()
             }
 

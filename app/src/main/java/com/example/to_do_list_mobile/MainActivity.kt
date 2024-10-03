@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ReportFragment.Companion.reportFragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.to_do_list_mobile.databinding.ActivityMainBinding
 import java.lang.Exception
 import com.google.gson.Gson
@@ -26,24 +27,30 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var toDoListView: RecyclerView
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var toDoListAdapter: ToDoListAdapter
     private lateinit var addBtn: ImageButton
     private lateinit var binding: ActivityMainBinding
     private lateinit var taskRepository: TaskRepository;
     private var toDoList = ArrayList<Task>()
 
+    @SuppressLint("NotifyDataSetChanged")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
-        taskRepository = TaskRepository()
+        swipeRefreshLayout = findViewById(R.id.swipeRefresh)
+        taskRepository = TaskRepository { tasks ->
+            toDoList.clear()
+            toDoList.addAll(tasks)
+            toDoListAdapter.notifyDataSetChanged()
+        }
 
         addBtn = findViewById(R.id.addBtn)
         addBtn.setOnClickListener{
             taskRepository.createNewTask();
-            displayToDoList();
         }
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -80,7 +87,9 @@ class MainActivity : AppCompatActivity() {
         toDoListView.layoutManager = LinearLayoutManager(this)
         toDoListView.adapter = toDoListAdapter
 
-        displayToDoList()
+        swipeRefreshLayout.setOnRefreshListener {
+            updateData();
+        }
     }
 
     private fun download(fileName: String, data: Any) {
@@ -122,7 +131,6 @@ class MainActivity : AppCompatActivity() {
                         newTaskDTOList.add(taskDTO);
                     }
                     taskRepository.sendToDatabase(newTaskDTOList);
-                    displayToDoList();
                 }
             }
         }
@@ -141,12 +149,8 @@ class MainActivity : AppCompatActivity() {
         toDoListAdapter.notifyDataSetChanged();
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    private fun displayToDoList(){
-        taskRepository.uploadFromDatabase();
-        toDoList.clear()
-        toDoList.addAll(taskRepository.toDoList)
-        toDoListAdapter.notifyDataSetChanged()
-        Log.d("after clear", toDoList.toString())
+    private fun updateData() {
+        taskRepository.uploadFromDatabase()
+        swipeRefreshLayout.isRefreshing = false
     }
 }
